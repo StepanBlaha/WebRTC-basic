@@ -1,54 +1,86 @@
-# Real-Time Video Streaming with WebRTC and Python
+# WebRTC Camera Stream Server
 
-## Introduction
+Python server that captures the local camera and streams it over WebRTC to any browser on the same network. Designed to run on a **Unitree G1 robot** and stream to a **Meta Quest** browser.
 
-This repository contains the source code for streaming camera frames in real-time from one machine to another using WebRTC and Python. The project demonstrates setting up a WebRTC connection and capturing video frames with OpenCV.
+## Requirements
 
-## Features
+- Python 3.11+
+- A connected camera
 
-- Real-time video streaming
-- Peer-to-peer communication using WebRTC
-- Simple signaling server setup
-- Python implementation using aiortc and OpenCV
-
-## Prerequisites
-
-Before you begin, ensure you have the following installed:
-
-- Python 3.x
-- Pip (Python package manager)
-
-## Installation
-
-1. Clone the repository:
-
-    ```bash
-    git clone https://github.com/eknathmali/Real-Time-Video-Streaming-with-WebRTC-and-Python.git
-    cd Real-Time-Video-Streaming-with-WebRTC-and-Python
-    ```
-
-2. Install the required Python packages:
-
-    ```bash
-    pip install -r requirements.txt
-    ```
-
-## Usage
-
-### Start `sender.py` on Remote Server:
+## Setup
 
 ```bash
-python sender.py
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
 ```
-### Start `receiver.py` on Local Machine:
+
+If any package fails to build on ARM64 (G1), install system deps first:
+```bash
+sudo apt install python3-dev libavformat-dev libavcodec-dev libavdevice-dev
+```
+
+## Run
 
 ```bash
-python receiver.py
+python stream_server.py --camera 0 --port 8080
 ```
-## Contributing
-Contributions are welcome! Please open an issue or submit a pull request for any improvements or additions.
 
-## Contact
-For questions or suggestions, please contact
- - Email: malieknath135@gmail.com 
- - LinkedIn: [Link](https://www.linkedin.com/in/eknath-mali-5544121b9/)
+Enable recording (saves `recording_YYYYMMDD_HHMMSS.mp4` next to the script):
+```bash
+python stream_server.py --camera 0 --record
+```
+
+Binds to `0.0.0.0:8080`. Find the robot's LAN IP:
+```bash
+hostname -I
+```
+
+### Flags
+
+| Flag | Default | Description |
+|---|---|---|
+| `--host` | `0.0.0.0` | Interface to bind |
+| `--port` | `8080` | Port to listen on |
+| `--camera` | `0` | OS camera index |
+| `--record` | off | Save camera output to a local `.mp4` |
+
+## Viewer
+
+Use the companion repo **WebRTC-viewer** to connect from a browser on the same network.
+
+**Option A — serve the viewer from the robot** (recommended for Quest):
+```bash
+# build on your machine
+cd ../WebRTC-viewer && npm run build
+
+# copy to robot
+scp -r dist/ user@<robot-ip>:~/WebRTC-basic/webclient/dist/
+```
+Then open `http://<robot-ip>:8080` in the Quest browser.
+
+**Option B — run the viewer dev server separately** on any machine on the same network:
+```bash
+cd ../WebRTC-viewer && npm run dev -- --host
+```
+Open `http://<that-machine-ip>:5173` in the Quest browser, enter `ws://<robot-ip>:8080/ws`.
+
+## Testing locally before deploying
+
+```bash
+# terminal 1
+python stream_server.py --camera 0
+
+# terminal 2
+cd ../WebRTC-viewer && npm run dev
+```
+
+Open `http://localhost:5173`, connect to `ws://localhost:8080/ws`.
+
+## Troubleshooting
+
+| Issue | Fix |
+|---|---|
+| Port 8080 blocked | `sudo ufw allow 8080` |
+| Wrong camera | Try `--camera 1` or `--camera 2` |
+| ARM build fails | Install system deps above |
+| Quest browser blocks `ws://` | Add TLS — self-signed cert + `wss://` |

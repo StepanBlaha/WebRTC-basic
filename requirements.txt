@@ -1,4 +1,5 @@
-asyncio
-opencv-python-headless
+aiohttp
 aiortc
-av 
+av
+numpy
+opencv-python-headless
